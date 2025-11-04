@@ -28,6 +28,7 @@ export function App() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const contadorBatidasRef = useRef(0)
   const indiceSequencialRef = useRef(0)
+  const proximoAcordeRef = useRef<string>("")
 
   useEffect(() => {
     const AudioContextClass =
@@ -47,7 +48,6 @@ export function App() {
       if (acordes.length === 0) return ""
 
       if (modoAleatorio) {
-        // Modo aleatório: escolhe um acorde diferente do atual
         const acordesDisponiveis = acordes.filter(
           (acorde) => acorde !== acordeAtual
         )
@@ -60,7 +60,6 @@ export function App() {
           return acordes[0]
         }
       } else {
-        // Modo sequencial: segue a ordem do array
         const indiceAtual = acordes.findIndex(
           (acorde) => acorde === acordeAtual
         )
@@ -76,12 +75,6 @@ export function App() {
     },
     [acordes, modoAleatorio]
   )
-
-  useEffect(() => {
-    if (isPlaying && acordeAtual) {
-      setProximoAcorde(calcularProximoAcorde(acordeAtual))
-    }
-  }, [acordeAtual, isPlaying, calcularProximoAcorde])
 
   const tocarSom = () => {
     if (!audioContextRef.current) return
@@ -116,10 +109,18 @@ export function App() {
         setBatidaAtual(contadorBatidasRef.current)
 
         if (contadorBatidasRef.current % intervalo === 0) {
-          setAcordeAtual((acordeAtualAnterior) => {
-            const proximo = calcularProximoAcorde(acordeAtualAnterior)
-            return proximo || acordeAtualAnterior
-          })
+          const acordeQueVaiSerTocado = proximoAcordeRef.current
+
+          if (acordeQueVaiSerTocado) {
+            setAcordeAtual(acordeQueVaiSerTocado)
+
+            const proximoDepoisDeste = calcularProximoAcorde(
+              acordeQueVaiSerTocado
+            )
+
+            proximoAcordeRef.current = proximoDepoisDeste
+            setProximoAcorde(proximoDepoisDeste)
+          }
         }
       }, intervaloMs)
 
@@ -159,8 +160,10 @@ export function App() {
       indiceSequencialRef.current = 0
       primeiroAcorde = acordes[0]
     }
+    const primeiroProximo = calcularProximoAcorde(primeiroAcorde)
+    proximoAcordeRef.current = primeiroProximo
     setAcordeAtual(primeiroAcorde)
-    setProximoAcorde(calcularProximoAcorde(primeiroAcorde))
+    setProximoAcorde(primeiroProximo)
   }
 
   const pausar = () => {
@@ -178,6 +181,7 @@ export function App() {
     setBatidaAtual(0)
     setAcordeAtual("")
     setProximoAcorde("")
+    proximoAcordeRef.current = ""
     indiceSequencialRef.current = 0
     if (intervaloRef.current) {
       clearInterval(intervaloRef.current)
